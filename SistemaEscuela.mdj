@@ -1,0 +1,62 @@
+{
+	"_type": "Project",
+	"_id": "AAAAAAFF+h6SjaM2Hec=",
+	"name": "Untitled",
+	"ownedElements": [
+		{
+			"_type": "UMLModel",
+			"_id": "AAAAAAGg/iBU2zYIoKg=",
+			"_parent": {
+				"$ref": "AAAAAAFF+h6SjaM2Hec="
+			},
+			"name": "Clases",
+			"ownedElements": [
+				{
+					"_type": "UMLClassDiagram",
+					"_id": "AAAAAAGg/iBU2zYJ54o=",
+					"_parent": {
+						"$ref": "AAAAAAGg/iBU2zYIoKg="
+					},
+					"name": "ClassDiagram1"
+				}
+			]
+		},
+		{
+			"_type": "UMLModel",
+			"_id": "AAAAAAGg/iCh/DYNmsY=",
+			"_parent": {
+				"$ref": "AAAAAAFF+h6SjaM2Hec="
+			},
+			"name": "Componentes",
+			"ownedElements": [
+				{
+					"_type": "UMLComponentDiagram",
+					"_id": "AAAAAAGg/iCh/DYOZ04=",
+					"_parent": {
+						"$ref": "AAAAAAGg/iCh/DYNmsY="
+					},
+					"name": "ComponentDiagram1"
+				}
+			]
+		},
+		{
+			"_type": "UMLModel",
+			"_id": "AAAAAAGg/iDX/DYSHfE=",
+			"_parent": {
+				"$ref": "AAAAAAFF+h6SjaM2Hec="
+			},
+			"name": "Despliegue",
+			"ownedElements": [
+				{
+					"_type": "UMLDeploymentDiagram",
+					"_id": "AAAAAAGg/iDX/DYTdeA=",
+					"_parent": {
+						"$ref": "AAAAAAGg/iDX/DYSHfE="
+					},
+					"name": "DeploymentDiagram1"
+				}
+			]
+		}
+	],
+	"documentVersion": 1
+}
