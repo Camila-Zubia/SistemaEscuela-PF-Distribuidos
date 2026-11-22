@@ -1,0 +1,12 @@
+#Se tiene que correr todos los servicios antes de poder probar
+
+Invoke-RestMethod -Uri "http://localhost:8084/api/integracion/aval/sincronizar" -Method Post
+
+Invoke-RestMethod -Uri "http://localhost:8082/api/aval/resolver" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"idEntrega":"ENT-101","aprobado":true}'
+
+Invoke-RestMethod -Uri "http://localhost:8084/api/integracion/calificaciones/sincronizar" -Method Post
+
+Invoke-RestMethod -Uri "http://localhost:8092/mock/registro-escolar/reportes" -Method Get
