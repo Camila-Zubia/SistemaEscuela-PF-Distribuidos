@@ -9,7 +9,6 @@
     <artifactId>MoodleMock</artifactId>
     <packaging>jar</packaging>
     <properties>
-        <maven.compiler.release>25</maven.compiler.release>
         <exec.mainClass>com.itson.moodlemock.MoodleMock</exec.mainClass>
     </properties>
 </project>

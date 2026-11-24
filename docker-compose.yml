@@ -1,0 +1,48 @@
+# Infraestructura para desarrollo: RabbitMQ y PostgreSQL.
+# Levantar:  docker compose up -d
+# Apagar:    docker compose down        (agrega -v para borrar los datos)
+#
+# RabbitMQ:   amqp://escuela:escuela@localhost:5672
+#             Panel de administracion: http://localhost:15672  (usuario escuela / escuela)
+# PostgreSQL: localhost:5432, usuario escuela / escuela
+#             Una base por servicio: aval, notificar, mensajeria, integracion
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: escuela-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: escuela
+      RABBITMQ_DEFAULT_PASS: escuela
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16
+    container_name: escuela-postgres
+    environment:
+      POSTGRES_USER: escuela
+      POSTGRES_PASSWORD: escuela
+      POSTGRES_DB: escuela
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escuela"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rabbitmq-data:
+  postgres-data:

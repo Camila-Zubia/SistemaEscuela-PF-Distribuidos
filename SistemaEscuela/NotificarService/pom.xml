@@ -9,7 +9,6 @@
     <artifactId>NotificarService</artifactId>
     <packaging>jar</packaging>
     <properties>
-        <maven.compiler.release>25</maven.compiler.release>
         <exec.mainClass>com.itson.ntificarservice.NtificarService</exec.mainClass>
     </properties>
     <name>NotificarService</name>

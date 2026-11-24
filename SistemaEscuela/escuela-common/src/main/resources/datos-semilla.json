@@ -1,0 +1,63 @@
+{
+  "descripcion": "Datos de prueba compartidos por los mocks y los servicios. Todos los nombres son ficticios. Casos cubiertos: tutor con 2 hijos (T001), alumno con 2 tutores (A002), calificacion reprobatoria (A002 en Historia), descenso de promedio (A003 en Matematicas), tareas vencidas sin entregar (A004, 3 tareas: omitidas acumuladas), tarea que requiere aval (ENT-101) y profesor sin calificaciones a tiempo (EMP-21).",
+  "periodos": ["P1", "P2"],
+  "profesores": [
+    { "numEmpleado": "EMP-10", "nombre": "Carlos Mendoza", "email": "carlos.mendoza@escuela.example", "telefono": "6440000010", "especialidad": "Matematicas" },
+    { "numEmpleado": "EMP-21", "nombre": "Roberto Salas", "email": "roberto.salas@escuela.example", "telefono": "6440000021", "especialidad": "Historia" },
+    { "numEmpleado": "EMP-30", "nombre": "Laura Ibarra", "email": "laura.ibarra@escuela.example", "telefono": "6440000030", "especialidad": "Ingles" }
+  ],
+  "alumnos": [
+    { "matricula": "A001", "nombre": "Diego Ruiz", "curp": "RUXD100101HSRZGA01", "email": "a001@alumnos.example" },
+    { "matricula": "A002", "nombre": "Sofia Valdez", "curp": "VAXS100202MSRLFA02", "email": "a002@alumnos.example" },
+    { "matricula": "A003", "nombre": "Mateo Ruiz", "curp": "RUXM110303HSRZTA03", "email": "a003@alumnos.example" },
+    { "matricula": "A004", "nombre": "Valeria Cota", "curp": "COXV100404MSRTLA04", "email": "a004@alumnos.example" },
+    { "matricula": "A005", "nombre": "Emiliano Soto", "curp": "SOXE100505HSRTMA05", "email": "a005@alumnos.example" }
+  ],
+  "tutores": [
+    { "idTutor": "T001", "nombre": "Andrea Ruiz", "email": "andrea.ruiz@familias.example", "telefono": "6441110001", "parentesco": "Madre", "matriculasHijos": ["A001", "A003"] },
+    { "idTutor": "T002", "nombre": "Jorge Valdez", "email": "jorge.valdez@familias.example", "telefono": "6441110002", "parentesco": "Padre", "matriculasHijos": ["A002"] },
+    { "idTutor": "T003", "nombre": "Martha Leyva", "email": "martha.leyva@familias.example", "telefono": "6441110003", "parentesco": "Madre", "matriculasHijos": ["A002"] },
+    { "idTutor": "T004", "nombre": "Ramon Cota", "email": "ramon.cota@familias.example", "telefono": "6441110004", "parentesco": "Abuelo", "matriculasHijos": ["A004"] },
+    { "idTutor": "T005", "nombre": "Patricia Soto", "email": "patricia.soto@familias.example", "telefono": "6441110005", "parentesco": "Madre", "matriculasHijos": ["A005"] }
+  ],
+  "materias": [
+    { "id": "MAT-2", "nombre": "Matematicas II", "creditos": 8 },
+    { "id": "HIS-1", "nombre": "Historia", "creditos": 6 },
+    { "id": "ING-1", "nombre": "Ingles", "creditos": 6 }
+  ],
+  "cursos": [
+    { "id": "CUR-101", "idMateria": "MAT-2", "materia": "Matematicas II", "numEmpleado": "EMP-10", "grupo": "3A", "ciclo": "2026-2", "matriculas": ["A001", "A002", "A003", "A004", "A005"] },
+    { "id": "CUR-103", "idMateria": "HIS-1", "materia": "Historia", "numEmpleado": "EMP-21", "grupo": "3A", "ciclo": "2026-2", "matriculas": ["A001", "A002", "A004"] },
+    { "id": "CUR-105", "idMateria": "ING-1", "materia": "Ingles", "numEmpleado": "EMP-30", "grupo": "3B", "ciclo": "2026-2", "matriculas": ["A001", "A003", "A005"] }
+  ],
+  "tareas": [
+    { "idTarea": "T-10", "idCurso": "CUR-101", "titulo": "Ejercicios de derivadas", "fechaLimite": "2026-11-20T23:59:00", "requiereAvalPadre": true },
+    { "idTarea": "T-11", "idCurso": "CUR-101", "titulo": "Problemario de limites", "fechaLimite": "2026-11-18T23:59:00", "requiereAvalPadre": false },
+    { "idTarea": "T-12", "idCurso": "CUR-103", "titulo": "Ensayo Revolucion Mexicana", "fechaLimite": "2026-11-15T23:59:00", "requiereAvalPadre": false },
+    { "idTarea": "T-13", "idCurso": "CUR-103", "titulo": "Linea del tiempo", "fechaLimite": "2026-11-21T23:59:00", "requiereAvalPadre": true },
+    { "idTarea": "T-14", "idCurso": "CUR-105", "titulo": "Reading comprehension", "fechaLimite": "2026-12-15T23:59:00", "requiereAvalPadre": false }
+  ],
+  "entregas": [
+    { "idEntrega": "ENT-101", "idTarea": "T-10", "matricula": "A001", "archivoUrl": "https://moodle.example/entregas/ENT-101.pdf", "fechaEntrega": "2026-11-19T18:30:00" },
+    { "idEntrega": "ENT-102", "idTarea": "T-11", "matricula": "A002", "archivoUrl": "https://moodle.example/entregas/ENT-102.pdf", "fechaEntrega": "2026-11-17T20:10:00" },
+    { "idEntrega": "ENT-103", "idTarea": "T-10", "matricula": "A003", "archivoUrl": "https://moodle.example/entregas/ENT-103.pdf", "fechaEntrega": "2026-11-20T21:45:00" },
+    { "idEntrega": "ENT-104", "idTarea": "T-11", "matricula": "A001", "archivoUrl": "https://moodle.example/entregas/ENT-104.pdf", "fechaEntrega": "2026-11-18T22:00:00" },
+    { "idEntrega": "ENT-105", "idTarea": "T-13", "matricula": "A002", "archivoUrl": "https://moodle.example/entregas/ENT-105.pdf", "fechaEntrega": "2026-11-21T19:00:00" },
+    { "idEntrega": "ENT-106", "idTarea": "T-12", "matricula": "A001", "archivoUrl": "https://moodle.example/entregas/ENT-106.pdf", "fechaEntrega": "2026-11-15T12:00:00" }
+  ],
+  "calificaciones": [
+    { "idCalificacion": "CAL-001", "matricula": "A001", "idCurso": "CUR-101", "periodo": "P1", "calificacionFinal": 8.8 },
+    { "idCalificacion": "CAL-002", "matricula": "A001", "idCurso": "CUR-101", "periodo": "P2", "calificacionFinal": 9.1 },
+    { "idCalificacion": "CAL-003", "matricula": "A002", "idCurso": "CUR-101", "periodo": "P1", "calificacionFinal": 7.5 },
+    { "idCalificacion": "CAL-004", "matricula": "A002", "idCurso": "CUR-103", "periodo": "P1", "calificacionFinal": 5.2 },
+    { "idCalificacion": "CAL-005", "matricula": "A003", "idCurso": "CUR-101", "periodo": "P1", "calificacionFinal": 9.4 },
+    { "idCalificacion": "CAL-006", "matricula": "A003", "idCurso": "CUR-101", "periodo": "P2", "calificacionFinal": 7.0 },
+    { "idCalificacion": "CAL-007", "matricula": "A004", "idCurso": "CUR-101", "periodo": "P1", "calificacionFinal": 6.1 },
+    { "idCalificacion": "CAL-008", "matricula": "A005", "idCurso": "CUR-105", "periodo": "P1", "calificacionFinal": 9.7 }
+  ],
+  "entregaCalificacionesProfesores": [
+    { "numEmpleado": "EMP-10", "idCurso": "CUR-101", "periodo": "P2", "aTiempo": true },
+    { "numEmpleado": "EMP-21", "idCurso": "CUR-103", "periodo": "P2", "aTiempo": false },
+    { "numEmpleado": "EMP-30", "idCurso": "CUR-105", "periodo": "P2", "aTiempo": true }
+  ]
+}

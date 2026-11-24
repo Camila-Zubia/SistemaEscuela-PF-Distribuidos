@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.itson</groupId>
+        <artifactId>SistemaEscuela</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <!--
+        Plantilla de microservicio en Quarkus.
+        Para crear o migrar un servicio:
+        1. Copia esta carpeta y cambia el artifactId y el paquete.
+        2. Cambia el puerto en src/main/resources/application.properties.
+        3. Agrega el modulo en el pom padre.
+        En NetBeans: Propiedades del proyecto > Actions > Run y Debug > Execute Goals: quarkus:dev
+    -->
+    <artifactId>ServicioPlantilla</artifactId>
+    <packaging>jar</packaging>
+    <name>ServicioPlantilla</name>
+
+    <dependencies>
+        <!-- REST con JSON (servidor) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <!-- Cliente REST para llamar a otros servicios -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+        <!-- Eventos, RabbitMQ y datos semilla compartidos -->
+        <dependency>
+            <groupId>com.itson</groupId>
+            <artifactId>escuela-common</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

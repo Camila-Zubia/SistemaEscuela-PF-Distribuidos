@@ -9,7 +9,6 @@
     <artifactId>AvalService</artifactId>
     <packaging>jar</packaging>
     <properties>
-        <maven.compiler.release>25</maven.compiler.release>
         <exec.mainClass>com.itson.servicioaval.AvalApplication</exec.mainClass>
     </properties>
     <name>AvalService</name>

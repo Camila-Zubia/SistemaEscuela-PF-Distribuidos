@@ -5,7 +5,17 @@
     <artifactId>SistemaEscuela</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
+    <!--
+        POM padre del sistema. Todos los microservicios heredan de aqui:
+        - Java 21
+        - Versiones de Quarkus (BOM) y de RabbitMQ (amqp-client)
+        - Configuracion de plugins (compilador, Quarkus, pruebas)
+        Para crear un servicio nuevo, copia el modulo ServicioPlantilla.
+    -->
     <modules>
+        <module>escuela-common</module>
+        <module>ServicioPlantilla</module>
         <module>IntegrationService</module>
         <module>NotificarService</module>
         <module>AvalService</module>
@@ -13,7 +23,78 @@
         <module>MoodleMock</module>
         <module>RegistroEscolarMock</module>
     </modules>
+
     <properties>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.version>3.33.4</quarkus.platform.version>
+
+        <amqp-client.version>5.25.0</amqp-client.version>
+        <compiler-plugin.version>3.13.0</compiler-plugin.version>
+        <surefire-plugin.version>3.5.2</surefire-plugin.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.rabbitmq</groupId>
+                <artifactId>amqp-client</artifactId>
+                <version>${amqp-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.itson</groupId>
+                <artifactId>escuela-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler-plugin.version}</version>
+                    <configuration>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <systemPropertyVariables>
+                            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        </systemPropertyVariables>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>${quarkus.platform.group-id}</groupId>
+                    <artifactId>quarkus-maven-plugin</artifactId>
+                    <version>${quarkus.platform.version}</version>
+                    <extensions>true</extensions>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>build</goal>
+                                <goal>generate-code</goal>
+                                <goal>generate-code-tests</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
