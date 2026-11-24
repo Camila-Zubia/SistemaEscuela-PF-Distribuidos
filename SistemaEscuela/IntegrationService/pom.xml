@@ -6,9 +6,55 @@
         <artifactId>SistemaEscuela</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
+
     <artifactId>IntegrationService</artifactId>
     <packaging>jar</packaging>
-    <properties>
-        <exec.mainClass>com.itson.integrationservice.IntegrationApplication</exec.mainClass>
-    </properties>
+    <name>IntegrationService</name>
+
+    <dependencies>
+        <!-- REST con JSON (servidor Quarkus) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <!-- Cliente REST para llamar a MoodleMock (@RegisterRestClient) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+        <!-- Resiliencia: @Retry con backoff y @CircuitBreaker -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-fault-tolerance</artifactId>
+        </dependency>
+        <!-- Eventos, RabbitMQ, datos semilla y modelos compartidos -->
+        <dependency>
+            <groupId>com.itson</groupId>
+            <artifactId>escuela-common</artifactId>
+        </dependency>
+        <!-- Pruebas unitarias -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables combine.self="override"/>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
