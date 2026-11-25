@@ -1,5 +1,7 @@
 package com.itson.mensajeriaservice.chat;
 
+import com.itson.escuela.common.eventos.DatosEventos;
+import com.itson.escuela.common.modelo.TipoAlerta;
 import com.itson.mensajeriaservice.modelo.EstadoMensaje;
 import com.itson.mensajeriaservice.modelo.Mensaje;
 import java.time.Instant;
@@ -37,6 +39,15 @@ public final class MensajesWs {
 
         public static Estado fallido(String idConversacion, String idTemporal) {
             return new Estado("ESTADO", null, idConversacion, idTemporal, EstadoMensaje.FALLIDO);
+        }
+    }
+
+    /** "tipo" ya se usa para el tipo de mensaje, por eso el tipo de la alerta va en "tipoAlerta". */
+    public record Alerta(String tipo, String idAlerta, TipoAlerta tipoAlerta, String matricula, String mensaje,
+            Instant fechaEmision) {
+
+        public static Alerta de(DatosEventos.AlertaGenerada a) {
+            return new Alerta("ALERTA", a.idAlerta(), a.tipo(), a.matricula(), a.mensaje(), a.fechaEmision());
         }
     }
 

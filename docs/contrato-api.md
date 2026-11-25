@@ -159,7 +159,7 @@ Todos los mensajes son JSON con un campo `tipo`.
 |---|---|---|
 | `MENSAJE` | `idMensaje`, `idConversacion`, `emisor`, `contenido`, `fechaHora` | Llega un mensaje nuevo (o uno que estaba `EN_COLA` al conectarse) |
 | `ESTADO` | `idMensaje`, `idTemporal`, `estadoMensaje` | Cambió el estado de un mensaje que mandaste (`ENVIADO`, `ENTREGADO`, `LEIDO`, `FALLIDO`) |
-| `ALERTA` | los campos de `alerta.generada` | Notificar creó una alerta para este tutor |
+| `ALERTA` | `idAlerta`, `tipoAlerta`, `matricula`, `mensaje`, `fechaEmision` | Notificar creó una alerta para este tutor. El tipo de alerta va en `tipoAlerta` porque `tipo` ya es `ALERTA` |
 | `ERROR` | `error`, `mensaje` | Algo salió mal (por ejemplo, conversación ajena) |
 
 Ejemplo:
