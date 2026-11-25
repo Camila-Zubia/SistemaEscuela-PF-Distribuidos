@@ -6,6 +6,7 @@ import com.itson.mensajeriaservice.modelo.Mensaje;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.time.Instant;
 import java.util.List;
 import org.jboss.logging.Logger;
 
@@ -25,6 +26,20 @@ public class ChatService {
     Usuarios usuarios;
 
     public record Apertura(Conversacion conversacion, boolean creada) {
+    }
+
+    public List<Conversacion> conversacionesDe(String idUsuario) {
+        if (!usuarios.existe(idUsuario)) {
+            throw ChatException.noEncontrado("No existe el usuario " + idUsuario);
+        }
+        return Conversacion.delUsuario(idUsuario);
+    }
+
+    public List<Mensaje> historial(String idConversacion, Instant desde) {
+        if (Conversacion.findById(idConversacion) == null) {
+            throw ChatException.noEncontrado("No existe la conversacion " + idConversacion);
+        }
+        return Mensaje.historial(idConversacion, desde);
     }
 
     public Apertura abrirConversacion(String idTutor, String numEmpleado, String matricula) {

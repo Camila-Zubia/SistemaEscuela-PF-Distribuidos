@@ -69,4 +69,11 @@ public class Mensaje extends PanacheEntityBase {
         return list("conversacion.idConversacion = ?1 and emisor <> ?2 and estadoMensaje <> ?3 order by fechaHora",
                 idConversacion, idUsuario, EstadoMensaje.LEIDO);
     }
+
+    public static List<Mensaje> historial(String idConversacion, Instant desde) {
+        if (desde == null) {
+            return list("conversacion.idConversacion = ?1 order by fechaHora", idConversacion);
+        }
+        return list("conversacion.idConversacion = ?1 and fechaHora >= ?2 order by fechaHora", idConversacion, desde);
+    }
 }

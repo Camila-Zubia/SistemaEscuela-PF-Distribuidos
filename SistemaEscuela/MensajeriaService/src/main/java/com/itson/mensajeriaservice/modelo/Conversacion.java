@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,6 +60,10 @@ public class Conversacion extends PanacheEntityBase {
     public static Optional<Conversacion> buscar(String idTutor, String numEmpleado, String matricula) {
         return find("idTutor = ?1 and numEmpleado = ?2 and matricula = ?3", idTutor, numEmpleado, matricula)
                 .firstResultOptional();
+    }
+
+    public static List<Conversacion> delUsuario(String idUsuario) {
+        return list("idTutor = ?1 or numEmpleado = ?1 order by ultimaActividad desc", idUsuario);
     }
 
     public boolean participa(String idUsuario) {
