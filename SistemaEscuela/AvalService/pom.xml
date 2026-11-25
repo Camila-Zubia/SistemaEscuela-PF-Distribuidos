@@ -8,29 +8,32 @@
     </parent>
     <artifactId>AvalService</artifactId>
     <packaging>jar</packaging>
-    <properties>
-        <exec.mainClass>com.itson.servicioaval.AvalApplication</exec.mainClass>
-    </properties>
     <name>AvalService</name>
     <dependencies>
-        <!-- Source: https://mvnrepository.com/artifact/io.quarkus/quarkus-rest-jackson -->
+        <dependency>
+            <groupId>com.itson</groupId>
+            <artifactId>escuela-common</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson</artifactId>
-            <version>4.0.0</version>
         </dependency>
-        <!-- Source: https://mvnrepository.com/artifact/io.quarkus/quarkus-hibernate-orm-panache -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm-panache</artifactId>
-            <version>3.23.0</version>
             <type>jar</type>
         </dependency>
-        <!-- Source: https://mvnrepository.com/artifact/io.quarkus/quarkus-jdbc-postgresql -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jdbc-postgresql</artifactId>
-            <version>4.0.0</version>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

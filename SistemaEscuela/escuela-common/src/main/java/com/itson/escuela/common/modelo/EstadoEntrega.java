@@ -1,6 +1,9 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Enum.java to edit this template
+ */
 package com.itson.escuela.common.modelo;
 
-/** Estados de una entrega de tarea (diagrama de clases: EstadoEntrega). */
 public enum EstadoEntrega {
     PENDIENTE,
     ENTREGA_EN_TIEMPO,

@@ -3,6 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package com.itson.servicioaval;
+import com.itson.escuela.common.modelo.EstadoEntrega;
 import java.time.Instant;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Entity;
@@ -10,7 +11,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 @Entity
@@ -18,9 +19,11 @@ import java.util.List;
 public class SolicitudAval extends PanacheEntityBase {
     @Id
     public String idEntrega;          // Viene en el evento entrega.requiereAval
+    @JsonProperty("matricula")
     public String matriculaAlumno;    // Viene en el evento
-    public String idTutor;            // Viene en el evento (o se consulta para filtrar)
-    public String tituloTarea;        // Opcional, útil para mostrar en el GET pendientes
+    public String idTutor;
+    public String idTarea;
+    public String idCurso;
     
     @Enumerated(EnumType.STRING)
     public EstadoEntrega estado;
@@ -31,11 +34,11 @@ public class SolicitudAval extends PanacheEntityBase {
     public SolicitudAval() {} // Constructor vacío obligatorio para Panache
     
 
-    public SolicitudAval(String idEntrega, String matriculaAlumno, String idTutor, String tituloTarea) {
+    public SolicitudAval(String idEntrega, String matriculaAlumno, String idTarea, String idCurso) {
         this.idEntrega = idEntrega;
         this.matriculaAlumno = matriculaAlumno;
-        this.idTutor = idTutor;
-        this.tituloTarea = tituloTarea;
+        this.idTarea = idTarea;
+        this.idCurso = idCurso;
         this.estado = EstadoEntrega.PENDIENTE_AVAL;
         this.fechaSolicitud = Instant.now();
     }
@@ -43,10 +46,5 @@ public class SolicitudAval extends PanacheEntityBase {
     public void resolver(boolean aprobado) {
         this.fechaResolucion = Instant.now();
         this.estado = aprobado ? EstadoEntrega.AVALADA : EstadoEntrega.RECHAZADA_POR_TUTOR;
-    }
-
-    // Consultas rápidas con Panache
-    public static List<SolicitudAval> listarPendientesPorTutor(String idTutor) {
-        return list("idTutor = ?1 and estado = ?2", idTutor, EstadoEntrega.PENDIENTE_AVAL);
     }
 }
