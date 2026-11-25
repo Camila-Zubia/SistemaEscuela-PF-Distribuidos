@@ -4,9 +4,15 @@ import com.itson.escuela.common.eventos.DatosEventos;
 import com.itson.escuela.common.eventos.RoutingKeys;
 import com.itson.escuela.common.semilla.DatosSemilla;
 import com.itson.integrationservice.cliente.MoodleRestClient;
+import com.itson.integrationservice.cliente.RegistroEscolarSoapClient;
 import com.itson.integrationservice.modelo.IncidenciaDocente;
+import com.sistemaescuela.integration.soap.client.AcuseRecibo;
+import com.sistemaescuela.integration.soap.client.CalificacionAlumno;
+import com.sistemaescuela.integration.soap.client.ReporteEntregaCalificaciones;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -41,6 +47,11 @@ public class ServicioSincronizacion {
 
     @Inject
     GestorEventosRabbit gestorEventos;
+
+    @Inject
+    RegistroEscolarSoapClient registroEscolarClient;
+
+    private volatile AcuseRecibo ultimoAcuseRegistro;
 
     // Conjuntos en memoria para idempotencia: solo lo nuevo
     private final Set<String> entregasAvalPublicadas = ConcurrentHashMap.newKeySet();
@@ -172,8 +183,10 @@ public class ServicioSincronizacion {
 
         // 4. Deteccion de retardos docentes (profesores sin calificaciones a tiempo)
         List<DatosSemilla.EntregaCalificacionesProfesor> entregasProf = moodleClient.obtenerEntregaCalificaciones(null);
+        boolean tuvoRetardo = false;
         for (DatosSemilla.EntregaCalificacionesProfesor ecp : entregasProf) {
             if (!ecp.aTiempo()) {
+                tuvoRetardo = true;
                 String claveIncidencia = ecp.numEmpleado() + ":" + ecp.idCurso() + ":" + ecp.periodo();
                 if (llavesIncidencias.add(claveIncidencia)) {
                     DatosSemilla.Curso curso = mapaCursos.get(ecp.idCurso());
@@ -196,8 +209,37 @@ public class ServicioSincronizacion {
             }
         }
 
+        // 5. Enviar reporte consolidado a Registro Escolar (SOAP + validacion XSD)
+        ReporteEntregaCalificaciones reporte = construirReporte(calificaciones, tuvoRetardo);
+        this.ultimoAcuseRegistro = registroEscolarClient.enviarReporte(reporte);
+
         LOG.info("Sincronizacion de calificaciones finalizada: {} eventos publicados.", eventosPublicados);
         return eventosPublicados;
+    }
+
+    private ReporteEntregaCalificaciones construirReporte(
+            List<DatosSemilla.Calificacion> calificaciones,
+            boolean tuvoRetardo) {
+        String ahoraIso = Instant.now().toString();
+        ReporteEntregaCalificaciones reporte = new ReporteEntregaCalificaciones();
+        reporte.setIdReporte("REP-" + UUID.randomUUID().toString().substring(0, 8));
+        reporte.setPeriodo(calificaciones.isEmpty() ? "P1" : calificaciones.get(calificaciones.size() - 1).periodo());
+        reporte.setFechaEnvio(ahoraIso);
+        reporte.setTuvoRetardo(tuvoRetardo);
+
+        for (DatosSemilla.Calificacion cal : calificaciones) {
+            CalificacionAlumno item = new CalificacionAlumno();
+            item.setMatricula(cal.matricula());
+            item.setIdCurso(cal.idCurso());
+            item.setPromedio(BigDecimal.valueOf(cal.calificacionFinal()).setScale(2, RoundingMode.HALF_UP));
+            item.setFechaRegistro(ahoraIso);
+            reporte.getCalificaciones().add(item);
+        }
+        return reporte;
+    }
+
+    public AcuseRecibo getUltimoAcuseRegistro() {
+        return ultimoAcuseRegistro;
     }
 
     public List<IncidenciaDocente> getIncidenciasDocentes() {

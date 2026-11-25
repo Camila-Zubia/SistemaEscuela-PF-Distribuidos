@@ -7,10 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.itson.escuela.common.eventos.RoutingKeys;
 import com.itson.escuela.common.semilla.DatosSemilla;
 import com.itson.integrationservice.cliente.MoodleRestClient;
+import com.itson.integrationservice.cliente.RegistroEscolarSoapClient;
 import com.itson.integrationservice.modelo.IncidenciaDocente;
 import com.itson.integrationservice.servicio.GestorEventosRabbit;
 import com.itson.integrationservice.servicio.ServicioSincronizacion;
+import com.sistemaescuela.integration.soap.client.AcuseRecibo;
+import com.sistemaescuela.integration.soap.client.ReporteEntregaCalificaciones;
 import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -80,14 +84,36 @@ class ServicioSincronizacionTest {
         }
     }
 
+    static class RegistroEscolarSoapClientStub extends RegistroEscolarSoapClient {
+        final List<ReporteEntregaCalificaciones> reportesEnviados = new ArrayList<>();
+
+        @Override
+        public AcuseRecibo enviarReporte(ReporteEntregaCalificaciones reporte) {
+            // Valida contra el XSD real antes de aceptar el envio
+            String xml = serializarYValidarXml(reporte);
+            assertTrue(xml.contains("<ReporteEntregaCalificaciones"));
+            reportesEnviados.add(reporte);
+
+            AcuseRecibo acuse = new AcuseRecibo();
+            acuse.setIdReporte(reporte.getIdReporte());
+            acuse.setEstatus("RECIBIDO");
+            acuse.setFechaRecepcion(Instant.now().toString());
+            return acuse;
+        }
+    }
+
+    private RegistroEscolarSoapClientStub soapStub;
+
     @BeforeEach
     void setUp() throws Exception {
         servicio = new ServicioSincronizacion();
         gestorMock = new EventosCapturados();
+        soapStub = new RegistroEscolarSoapClientStub();
 
         // Inyectar dependencias por reflexion para prueba unitaria rapida y desacoplada
         inyectarCampo(servicio, "moodleClient", new MoodleRestClientStub());
         inyectarCampo(servicio, "gestorEventos", gestorMock);
+        inyectarCampo(servicio, "registroEscolarClient", soapStub);
     }
 
     private static void inyectarCampo(Object target, String campo, Object valor) throws Exception {
@@ -119,6 +145,9 @@ class ServicioSincronizacionTest {
         List<IncidenciaDocente> incidencias = servicio.getIncidenciasDocentes();
         assertFalse(incidencias.isEmpty(), "Debe registrar incidencias de profesores con retardo");
         assertTrue(incidencias.stream().anyMatch(i -> i.numEmpleado().equals("EMP-21")));
+
+        assertEquals(1, soapStub.reportesEnviados.size(), "Debe enviar el reporte SOAP validado contra XSD");
+        assertEquals("RECIBIDO", servicio.getUltimoAcuseRegistro().getEstatus());
 
         int segundaVez = servicio.sincronizarCalificacionesPeriodicas();
         assertEquals(0, segundaVez, "La segunda ejecucion no debe duplicar eventos");
