@@ -1,0 +1,89 @@
+{
+  "info": {
+    "name": "MensajeriaService",
+    "description": "Chat entre tutores y profesores (puerto 8085). Contrato: docs/contrato-api.md.\n\nAntes: `docker compose up -d` y correr MensajeriaService con `quarkus:dev`.\n\n## WebSocket (se crea aparte en Postman: New > WebSocket)\nPostman no exporta las peticiones WebSocket dentro de una coleccion, asi que se arman a mano:\n\n1. Pestana 1: `ws://localhost:8085/ws/chat/T002` (tutor)\n2. Pestana 2: `ws://localhost:8085/ws/chat/EMP-21` (profesor)\n3. Corre la peticion \"Abrir conversacion\" de esta coleccion y copia el `idConversacion`.\n4. Desde EMP-21 manda:\n```json\n{\"tipo\":\"ENVIAR\",\"idConversacion\":\"CONV-...\",\"contenido\":\"Buenas tardes\",\"idTemporal\":\"tmp-1\"}\n```\n5. T002 recibe `MENSAJE`. Copia su `idMensaje` y manda:\n```json\n{\"tipo\":\"ENTREGADO\",\"idMensaje\":\"MSG-...\"}\n```\n6. Para el \"visto\", desde T002:\n```json\n{\"tipo\":\"LEIDO\",\"idConversacion\":\"CONV-...\"}\n```\n7. Para probar mensajes en cola: cierra la pestana de T002, manda otro mensaje desde EMP-21 y vuelve a conectar T002.\n\n## Alertas\nCon T002 conectado, en http://localhost:15672 (escuela/escuela) > Exchanges > escuela.eventos > Publish message:\n- Routing key: `alerta.generada`\n- Properties: `message_id` = `evt-1`, `content_type` = `application/json`\n- Payload:\n```json\n{\"idEvento\":\"evt-1\",\"tipo\":\"alerta.generada\",\"fecha\":\"2026-11-25T07:00:00Z\",\"origen\":\"panel\",\"datos\":{\"idAlerta\":\"AL-1\",\"tipo\":\"CALIFICACION_REPROBATORIA\",\"matricula\":\"A002\",\"idTutor\":\"T002\",\"mensaje\":\"Sofia Valdez obtuvo 5.2 en Historia (P1)\",\"fechaEmision\":\"2026-11-25T07:00:00Z\"}}\n```\nT002 recibe un mensaje `ALERTA`. Si lo publicas otra vez con el mismo `message_id`, no llega de nuevo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:8085" },
+    { "key": "idConversacion", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Abrir conversacion (T002 con EMP-21 sobre A002)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 o 200', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+              "pm.collectionVariables.set('idConversacion', pm.response.json().idConversacion);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"idTutor\": \"T002\",\n  \"numEmpleado\": \"EMP-21\",\n  \"matricula\": \"A002\"\n}" },
+        "url": "{{base}}/api/mensajeria/conversaciones",
+        "description": "201 si es nueva, 200 si ya existia. Guarda el idConversacion en la variable de la coleccion."
+      }
+    },
+    {
+      "name": "Abrir conversacion no permitida (403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('403 PROHIBIDO', () => { pm.response.to.have.status(403); pm.expect(pm.response.json().error).to.eql('PROHIBIDO'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"idTutor\": \"T001\",\n  \"numEmpleado\": \"EMP-21\",\n  \"matricula\": \"A002\"\n}" },
+        "url": "{{base}}/api/mensajeria/conversaciones",
+        "description": "A002 no es hija de T001."
+      }
+    },
+    {
+      "name": "Conversaciones de un usuario",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));"] }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{base}}/api/mensajeria/conversaciones/T002",
+        "description": "Sirve para tutores (T002) y profesores (EMP-21). La mas reciente primero."
+      }
+    },
+    {
+      "name": "Historial de mensajes",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));"] }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base}}/api/mensajeria/conversaciones/{{idConversacion}}/mensajes?desde=2026-01-01T00:00:00Z",
+          "host": ["{{base}}"],
+          "path": ["api", "mensajeria", "conversaciones", "{{idConversacion}}", "mensajes"],
+          "query": [{ "key": "desde", "value": "2026-01-01T00:00:00Z", "description": "Opcional, ISO-8601" }]
+        },
+        "description": "Del mas viejo al mas nuevo."
+      }
+    }
+  ]
+}
