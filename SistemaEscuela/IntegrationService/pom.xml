@@ -11,4 +11,46 @@
     <properties>
         <exec.mainClass>com.itson.integrationservice.IntegrationApplication</exec.mainClass>
     </properties>
+
+    <dependencies>
+        <!-- APIs de Jakarta XML Web Services (jakarta.xml.ws.*) -->
+        <dependency>
+            <groupId>jakarta.xml.ws</groupId>
+            <artifactId>jakarta.xml.ws-api</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+
+        <!-- Implementación en tiempo de ejecución (Metro / JAX-WS RI) -->
+        <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-rt</artifactId>
+            <version>4.0.2</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.sun.xml.ws</groupId>
+                <artifactId>jaxws-maven-plugin</artifactId>
+                <version>4.0.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <wsdlUrls>
+                        <wsdlUrl>http://localhost:8092/registro-escolar?wsdl</wsdlUrl>
+                    </wsdlUrls>
+                    <packageName>com.sistemaescuela.integration.soap.client</packageName>
+                    <sourceDestDir>${project.basedir}/src/main/java</sourceDestDir>
+                    <keep>true</keep>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

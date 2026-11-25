@@ -11,4 +11,26 @@
     <properties>
         <exec.mainClass>com.itson.registroescolarmock.RegistroEscolarMock</exec.mainClass>
     </properties>
+    <dependencies>
+        <!-- API de Jakarta Web Services (jakarta.jws.*) y Jakarta XML Binding (jakarta.xml.bind.*) -->
+        <dependency>
+            <groupId>jakarta.xml.ws</groupId>
+            <artifactId>jakarta.xml.ws-api</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+
+        <!-- Implementación en runtime de JAX-WS (incluye soporte SOAP / WSDL / Endpoint.publish y JAXB) -->
+        <dependency>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-rt</artifactId>
+            <version>4.0.3</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+  
 </project>
