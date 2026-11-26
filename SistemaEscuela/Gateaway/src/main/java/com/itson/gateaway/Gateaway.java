@@ -2,13 +2,13 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  */
 
-package com.itson.mensajeriaservice;
+package com.itson.gateaway;
 
 /**
  *
  * @author Usuario
  */
-public class MensajeriaService {
+public class Gateaway {
 
     public static void main(String[] args) {
         System.out.println("Hello World!");
