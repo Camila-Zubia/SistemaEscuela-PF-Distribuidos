@@ -1,0 +1,931 @@
+{
+  "info": {
+    "name": "SistemaEscuela - Sistema completo",
+    "description": "Prueba de punta a punta de los 7 servicios.\n\n## Antes de correrla\n1. `.\\iniciar-todo.ps1 -Limpio` (empieza con las bases y colas vacias).\n2. Opcional: conecta los WebSocket `ws://localhost:8085/ws/chat/T001` y `/T002` para ver las alertas llegar en vivo.\n\n## Como correrla\nClic derecho en la coleccion > **Run collection** > **Run**. Corre las carpetas en orden 0, 1, 2: cada peticion guarda en variables lo que necesita la siguiente (idEntrega, idAlerta, idConversacion).\n\n## Resiliencia (a mano)\n- Cierra la ventana de NotificarService, corre \"3. sincronizar calificaciones\" y mira en http://localhost:15672 como la cola `notificar.eventos` acumula mensajes. Vuelve a abrir Notificar: los procesa y llegan las alertas.\n- `docker stop escuela-rabbitmq` y luego `docker start escuela-rabbitmq`: Integration, Notificar y Mensajeria se reconectan solos.\n- Cierra MoodleMock y sincroniza: Integration responde con error pero no se cae.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gateway",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "integration",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "aval",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "notificar",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "mensajeria",
+      "value": "http://localhost:8085"
+    },
+    {
+      "key": "moodle",
+      "value": "http://localhost:8091"
+    },
+    {
+      "key": "registro",
+      "value": "http://localhost:8092"
+    },
+    {
+      "key": "rabbit",
+      "value": "http://localhost:15672"
+    },
+    {
+      "key": "idEntrega",
+      "value": ""
+    },
+    {
+      "key": "idAlerta",
+      "value": ""
+    },
+    {
+      "key": "idConversacion",
+      "value": ""
+    },
+    {
+      "key": "noLeidasAntes",
+      "value": ""
+    },
+    {
+      "key": "noLeidasDespues",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0 - Todo esta arriba",
+      "description": "Revisa que cada servicio responda. Si alguno falla aqui, el resto de la coleccion no va a pasar.",
+      "item": [
+        {
+          "name": "MoodleMock :8091 - cursos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{moodle}}/mock/moodle/cursos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene los 3 cursos de los datos semilla', () => pm.expect(pm.response.json()).to.have.lengthOf(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RegistroEscolar :8092 - WSDL (SOAP)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{registro}}/registro-escolar?wsdl",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Es un WSDL', () => pm.expect(pm.response.text()).to.include('definitions'));",
+                  "pm.test('Tiene la operacion enviarReporte', () => pm.expect(pm.response.text()).to.include('enviarReporte'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "AvalService :8082",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{aval}}/api/aval/pendientes/T999",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde una lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "NotificarService :8083",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notificar}}/api/notificar/buzon/T001",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde una lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "MensajeriaService :8085",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{mensajeria}}/api/mensajeria/conversaciones/T001",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde una lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "IntegrationService :8084 - estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{integration}}/api/integracion/estado",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Integration esta conectado a RabbitMQ', () => pm.expect(pm.response.json().rabbitConectado).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "API Gateway :8080 - hijos de T001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/tutores/T001/hijos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('T001 tiene 2 hijos (Diego y Mateo)', () => {",
+                  "    const matriculas = pm.response.json().map(h => h.matricula).sort();",
+                  "    pm.expect(matriculas).to.eql(['A001', 'A003']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RabbitMQ :15672 - colas con consumidor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{rabbit}}/api/queues",
+            "description": "Usa el usuario escuela / escuela del docker-compose.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "escuela"
+                },
+                {
+                  "key": "password",
+                  "value": "escuela"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const colas = pm.response.json();",
+                  "['aval.eventos', 'notificar.eventos', 'mensajeria.eventos', 'integracion.eventos'].forEach(nombre => {",
+                  "    pm.test(nombre + ' tiene consumidor', () => {",
+                  "        const cola = colas.find(c => c.name === nombre);",
+                  "        pm.expect(cola, 'no existe la cola ' + nombre).to.exist;",
+                  "        pm.expect(cola.consumers).to.be.at.least(1);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1 - Flujo completo (un dia en la escuela)",
+      "description": "La historia completa: Moodle publica tareas y calificaciones, Aval pide el aval del padre, Notificar genera alertas, el padre las lee, da el aval, Integration se entera y el padre habla con el profesor.\n\nPara ver las alertas llegar en vivo, conecta antes en Postman los WebSocket ws://localhost:8085/ws/chat/T001 y /T002.",
+      "item": [
+        {
+          "name": "1. Moodle -> sincronizar entregas que requieren aval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{integration}}/api/integracion/aval/sincronizar",
+            "description": "Integration lee Moodle y publica entrega.requiereAval. Aval crea la solicitud y publica aval.solicitado. Notificar genera TAREA_PENDIENTE_AVAL y Mensajeria la manda por WebSocket."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde cuantos eventos publico', () => pm.expect(pm.response.json().eventosPublicados).to.be.a('number'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Gateway -> avales pendientes de T001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/aval/pendientes/T001",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const pendientes = pm.response.json();",
+                  "pm.test('Hay al menos un aval pendiente (si falla, arranca con iniciar-todo.ps1 -Limpio)', () => pm.expect(pendientes).to.not.be.empty);",
+                  "pm.test('Todos estan en PENDIENTE_AVAL', () => pendientes.forEach(p => pm.expect(p.estado).to.eql('PENDIENTE_AVAL')));",
+                  "pm.test('Son hijos de T001 (A001 o A003)', () => pendientes.forEach(p => pm.expect(['A001', 'A003']).to.include(p.matricula)));",
+                  "if (pendientes.length) { pm.collectionVariables.set('idEntrega', pendientes[0].idEntrega); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Moodle -> sincronizar calificaciones y tareas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{integration}}/api/integracion/calificaciones/sincronizar",
+            "description": "Publica calificacion.registrada y tarea.vencida, y manda el reporte a Registro Escolar por SOAP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde cuantos eventos publico', () => pm.expect(pm.response.json().eventosPublicados).to.be.a('number'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Gateway -> buzon de T002 (papa de Sofia)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T002",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const tipos = pm.response.json().map(a => a.tipo);",
+                  "pm.test('Sofia reprobo Historia: CALIFICACION_REPROBATORIA', () => pm.expect(tipos).to.include('CALIFICACION_REPROBATORIA'));",
+                  "pm.test('Tiene una tarea esperando su aval: TAREA_PENDIENTE_AVAL', () => pm.expect(tipos).to.include('TAREA_PENDIENTE_AVAL'));",
+                  "const noLeida = pm.response.json().find(a => !a.leida);",
+                  "pm.test('Hay al menos una alerta sin leer', () => pm.expect(noLeida).to.exist);",
+                  "if (noLeida) { pm.collectionVariables.set('idAlerta', noLeida.idAlerta); }"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Gateway -> buzon de T001 (mama de Diego y Mateo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T001",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const alertas = pm.response.json();",
+                  "pm.test('Mateo bajo su promedio: DESCENSO_PROMEDIO', () => pm.expect(alertas.map(a => a.tipo)).to.include('DESCENSO_PROMEDIO'));",
+                  "pm.test('Tiene alertas de sus dos hijos', () => {",
+                  "    const hijos = [...new Set(alertas.map(a => a.matricula))];",
+                  "    pm.expect(hijos).to.include.members(['A001', 'A003']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Gateway -> filtrar buzon por hijo (solo Mateo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T001?matricula=A003",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo trae alertas de A003', () => pm.response.json().forEach(a => pm.expect(a.matricula).to.eql('A003')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. Gateway -> total de no leidas de T002",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T002/no-leidas/total",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const total = pm.response.json().noLeidas;",
+                  "pm.test('Responde un numero', () => pm.expect(total).to.be.a('number'));",
+                  "pm.collectionVariables.set('noLeidasAntes', total);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. Gateway -> marcar una alerta como leida",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/notificar/buzon/{{idAlerta}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leida\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Quedo leida', () => pm.expect(pm.response.json().leida).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. Gateway -> el total de no leidas bajo en 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T002/no-leidas/total",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const antes = Number(pm.collectionVariables.get('noLeidasAntes'));",
+                  "pm.test('Bajo de ' + antes + ' a ' + (antes - 1), () => pm.expect(pm.response.json().noLeidas).to.eql(antes - 1));",
+                  "pm.collectionVariables.set('noLeidasDespues', pm.response.json().noLeidas);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Gateway -> la mama da el aval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/aval/resolver",
+            "description": "Aval publica aval.resuelto; Integration lo recibe.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idEntrega\": \"{{idEntrega}}\",\n  \"idTutor\": \"T001\",\n  \"aprobado\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Quedo AVALADA', () => pm.expect(pm.response.json().estado).to.eql('AVALADA'));",
+                  "pm.test('Guardo quien la resolvio', () => pm.expect(pm.response.json().idTutor).to.eql('T001'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Integration se entero del aval (evento aval.resuelto)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{integration}}/api/integracion/avales-resueltos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const id = pm.collectionVariables.get('idEntrega');",
+                  "pm.test('Integration recibio ' + id + ' como AVALADA', () => {",
+                  "    const aval = pm.response.json().avalesResueltos.find(a => a.idEntrega === id);",
+                  "    pm.expect(aval, 'no llego el evento').to.exist;",
+                  "    pm.expect(aval.estado).to.eql('AVALADA');",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 2000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. Integration -> estado (reporte enviado por SOAP)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{integration}}/api/integracion/estado",
+            "description": "El acuse de Registro Escolar aparece en la ventana de IntegrationService: \"Acuse recibido de RegistroEscolar SOAP\"."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const e = pm.response.json();",
+                  "pm.test('Publico calificaciones', () => pm.expect(e.totalCalificacionesPublicadas).to.be.above(0));",
+                  "pm.test('Recibio avales resueltos', () => pm.expect(e.totalAvalesResueltosRecibidos).to.be.above(0));",
+                  "pm.test('Detecto al profesor que no subio calificaciones a tiempo', () => pm.expect(e.totalIncidenciasDocentes).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. Gateway -> el papa abre el chat con el profesor de Historia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/mensajeria/conversaciones",
+            "description": "Para chatear en vivo, conecta en Postman ws://localhost:8085/ws/chat/T002 y ws://localhost:8085/ws/chat/EMP-21 (ver la coleccion de MensajeriaService).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTutor\": \"T002\",\n  \"numEmpleado\": \"EMP-21\",\n  \"matricula\": \"A002\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 (nueva) o 200 (ya existia)', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set('idConversacion', pm.response.json().idConversacion);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. Gateway -> conversaciones del papa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/mensajeria/conversaciones/T002",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Aparece la conversacion', () => pm.expect(pm.response.json().map(c => c.idConversacion)).to.include(pm.collectionVariables.get('idConversacion')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15. Gateway -> historial del chat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/mensajeria/conversaciones/{{idConversacion}}/mensajes",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Responde una lista de mensajes', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 - Reglas de negocio",
+      "description": "Lo que el sistema NO debe permitir. Corre despues de la carpeta 1.",
+      "item": [
+        {
+          "name": "Aval ya resuelto -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/aval/resolver",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idEntrega\": \"{{idEntrega}}\",\n  \"idTutor\": \"T001\",\n  \"aprobado\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aval de un alumno que no es su hijo -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/aval/resolver",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idEntrega\": \"{{idEntrega}}\",\n  \"idTutor\": \"T002\",\n  \"aprobado\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aval de una entrega que no existe -> 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/aval/resolver",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idEntrega\": \"ENT-999\",\n  \"idTutor\": \"T001\",\n  \"aprobado\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aval sin datos -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/aval/resolver",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idEntrega\": \"ENT-101\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chat con un alumno ajeno -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{gateway}}/api/mensajeria/conversaciones",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idTutor\": \"T001\",\n  \"numEmpleado\": \"EMP-21\",\n  \"matricula\": \"A002\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', () => pm.response.to.have.status(403));",
+                  "pm.test('Error con el formato del contrato', () => {",
+                  "    const e = pm.response.json();",
+                  "    pm.expect(e.error).to.eql('PROHIBIDO');",
+                  "    pm.expect(e).to.have.property('mensaje');",
+                  "    pm.expect(e).to.have.property('fecha');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tutor que no existe -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/tutores/T999/hijos",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Volver a sincronizar avales",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{integration}}/api/integracion/aval/sincronizar",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Volver a sincronizar calificaciones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{integration}}/api/integracion/calificaciones/sincronizar",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "No se duplicaron alertas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gateway}}/api/notificar/buzon/T002/no-leidas/total",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const esperado = Number(pm.collectionVariables.get('noLeidasDespues'));",
+                  "pm.test('Siguen siendo ' + esperado + ' no leidas (los eventos repetidos se ignoran)', () => pm.expect(pm.response.json().noLeidas).to.eql(esperado));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 5000);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
