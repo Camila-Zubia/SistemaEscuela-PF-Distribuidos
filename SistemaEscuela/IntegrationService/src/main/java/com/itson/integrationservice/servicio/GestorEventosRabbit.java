@@ -111,7 +111,7 @@ public class GestorEventosRabbit {
         }
     }
 
-    private void procesarEventoRecibido(String routingKey, String json) {
+    public void procesarEventoRecibido(String routingKey, String json) {
         LOG.info("IntegrationService recibio evento [{}]", routingKey);
         if (RoutingKeys.AVAL_RESUELTO.equals(routingKey)) {
             try {

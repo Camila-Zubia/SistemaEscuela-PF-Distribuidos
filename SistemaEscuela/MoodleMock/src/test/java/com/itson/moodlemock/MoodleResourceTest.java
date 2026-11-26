@@ -71,4 +71,18 @@ class MoodleResourceTest {
         assertTrue(entregasAval.stream().allMatch(m -> Boolean.TRUE.equals(m.get("requiereAvalPadre"))));
         assertTrue(entregasAval.stream().anyMatch(m -> "ENT-101".equals(m.get("idEntrega"))));
     }
+
+    @Test
+    void filtrosInexistentesRegresanListaVaciaYPeriodoP2FiltraCorrectamente() {
+        assertTrue(resource.obtenerTareas("CUR-999").isEmpty());
+        assertTrue(resource.obtenerEntregas("T-999").isEmpty());
+
+        List<DatosSemilla.Calificacion> p2 = resource.obtenerCalificaciones("P2");
+        assertFalse(p2.isEmpty());
+        assertTrue(p2.stream().allMatch(c -> c.periodo().equals("P2")));
+
+        List<DatosSemilla.EntregaCalificacionesProfesor> entregasP2 = resource.obtenerEntregaCalificaciones("P2");
+        assertFalse(entregasP2.isEmpty());
+        assertTrue(entregasP2.stream().anyMatch(e -> e.numEmpleado().equals("EMP-21") && !e.aTiempo()));
+    }
 }
