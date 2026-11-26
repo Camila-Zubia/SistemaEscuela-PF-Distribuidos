@@ -1,0 +1,848 @@
+{
+  "info": {
+    "name": "NotificarService",
+    "description": "Alertas de rendimiento y buzon del tutor (puerto 8083). Contrato: docs/contrato-api.md y docs/contrato-eventos.md.\n\nAntes: `docker compose up -d` y correr NotificarService con `quarkus:dev`.\n\n## Orden sugerido\n1. Carpeta 4: crear la cola espia (una sola vez) para ver los `alerta.generada` que publica el servicio.\n2. Carpeta 1: publicar eventos. Simulan lo que mandan Integration y Aval. Cada peticion responde `{\"routed\": true}`.\n3. Carpeta 2: revisar el buzon directo en el servicio (8083).\n4. Carpeta 3: lo mismo pero a traves del API Gateway (8080), si esta corriendo.\n5. Carpeta 4: ver los `alerta.generada` en la cola espia.\n\n## Que alerta genera cada evento (datos semilla)\n- A002 saca 5.2 -> CALIFICACION_REPROBATORIA para T002 y T003 (A002 tiene dos tutores)\n- A003 baja de 9.4 (P1) a 7.0 (P2) -> DESCENSO_PROMEDIO para T001 (manda primero P1 y luego P2)\n- A004 con tarea vencida -> TAREA_NO_ENTREGADA para T004; a la tercera tambien TAREAS_OMITIDAS_ACUMULADAS\n- Aval de ENT-101 -> TAREA_PENDIENTE_AVAL para T001\n\n## Duplicados\nLa peticion \"Evento repetido\" usa siempre el mismo idEvento (`dup-001`). Mandala dos veces: la segunda vez el log dice \"Evento repetido ignorado\" y no se crea otra alerta. Tampoco se repiten alertas si el mismo dato llega con otro idEvento.\n\nPara empezar de cero: `docker compose down -v` y `docker compose up -d` (borra los datos de todas las bases locales).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "gateway",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "rabbit",
+      "value": "http://localhost:15672"
+    },
+    {
+      "key": "idAlerta",
+      "value": ""
+    },
+    {
+      "key": "evento",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Publicar eventos (simulan a Integration y Aval)",
+      "description": "Publican en el exchange escuela.eventos por la API HTTP de RabbitMQ. Cada peticion genera un idEvento nuevo.",
+      "auth": {
+        "type": "basic",
+        "basic": [
+          {
+            "key": "username",
+            "value": "escuela"
+          },
+          {
+            "key": "password",
+            "value": "escuela"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('evento', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Calificacion reprobatoria (A002, 5.2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"calificacion.registrada\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"calificacion.registrada\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idCalificacion\\\":\\\"CAL-004\\\",\\\"matricula\\\":\\\"A002\\\",\\\"idCurso\\\":\\\"CUR-103\\\",\\\"materia\\\":\\\"Historia\\\",\\\"numEmpleado\\\":\\\"EMP-21\\\",\\\"periodo\\\":\\\"P1\\\",\\\"calificacion\\\":5.2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "CALIFICACION_REPROBATORIA para T002 y T003."
+          }
+        },
+        {
+          "name": "Descenso 1/2: calificacion P1 (A003, 9.4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"calificacion.registrada\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"calificacion.registrada\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idCalificacion\\\":\\\"CAL-005\\\",\\\"matricula\\\":\\\"A003\\\",\\\"idCurso\\\":\\\"CUR-101\\\",\\\"materia\\\":\\\"Matematicas II\\\",\\\"numEmpleado\\\":\\\"EMP-10\\\",\\\"periodo\\\":\\\"P1\\\",\\\"calificacion\\\":9.4}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "No genera alerta. Es la calificacion del periodo anterior."
+          }
+        },
+        {
+          "name": "Descenso 2/2: calificacion P2 (A003, 7.0)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"calificacion.registrada\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"calificacion.registrada\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idCalificacion\\\":\\\"CAL-006\\\",\\\"matricula\\\":\\\"A003\\\",\\\"idCurso\\\":\\\"CUR-101\\\",\\\"materia\\\":\\\"Matematicas II\\\",\\\"numEmpleado\\\":\\\"EMP-10\\\",\\\"periodo\\\":\\\"P2\\\",\\\"calificacion\\\":7.0}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "DESCENSO_PROMEDIO para T001 (bajo 2.4 puntos, el limite es 1.5)."
+          }
+        },
+        {
+          "name": "Tarea vencida 1/3 (A004, T-10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"tarea.vencida\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"tarea.vencida\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idTarea\\\":\\\"T-10\\\",\\\"idCurso\\\":\\\"CUR-101\\\",\\\"titulo\\\":\\\"Ejercicios de derivadas\\\",\\\"matricula\\\":\\\"A004\\\",\\\"fechaLimite\\\":\\\"2026-11-15T23:59:00\\\"}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "TAREA_NO_ENTREGADA para T004."
+          }
+        },
+        {
+          "name": "Tarea vencida 2/3 (A004, T-11)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"tarea.vencida\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"tarea.vencida\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idTarea\\\":\\\"T-11\\\",\\\"idCurso\\\":\\\"CUR-101\\\",\\\"titulo\\\":\\\"Problemario de limites\\\",\\\"matricula\\\":\\\"A004\\\",\\\"fechaLimite\\\":\\\"2026-11-15T23:59:00\\\"}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "TAREA_NO_ENTREGADA para T004."
+          }
+        },
+        {
+          "name": "Tarea vencida 3/3 (A004, T-12)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"tarea.vencida\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"tarea.vencida\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idTarea\\\":\\\"T-12\\\",\\\"idCurso\\\":\\\"CUR-103\\\",\\\"titulo\\\":\\\"Ensayo Revolucion Mexicana\\\",\\\"matricula\\\":\\\"A004\\\",\\\"fechaLimite\\\":\\\"2026-11-15T23:59:00\\\"}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "TAREA_NO_ENTREGADA y TAREAS_OMITIDAS_ACUMULADAS para T004 (ya son 3)."
+          }
+        },
+        {
+          "name": "Aval solicitado (ENT-101, A001)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"aval.solicitado\",\n  \"properties\": {\n    \"message_id\": \"{{evento}}\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{evento}}\\\",\\\"tipo\\\":\\\"aval.solicitado\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idEntrega\\\":\\\"ENT-101\\\",\\\"idTarea\\\":\\\"T-10\\\",\\\"matricula\\\":\\\"A001\\\"}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "TAREA_PENDIENTE_AVAL para T001."
+          }
+        },
+        {
+          "name": "Evento repetido (mandalo dos veces)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Llego a la cola de Notificar', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"calificacion.registrada\",\n  \"properties\": {\n    \"message_id\": \"dup-001\",\n    \"content_type\": \"application/json\"\n  },\n  \"payload_encoding\": \"string\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"dup-001\\\",\\\"tipo\\\":\\\"calificacion.registrada\\\",\\\"fecha\\\":\\\"2026-11-25T18:00:00Z\\\",\\\"origen\\\":\\\"postman\\\",\\\"datos\\\":{\\\"idCalificacion\\\":\\\"CAL-008\\\",\\\"matricula\\\":\\\"A005\\\",\\\"idCurso\\\":\\\"CUR-105\\\",\\\"materia\\\":\\\"Ingles\\\",\\\"numEmpleado\\\":\\\"EMP-30\\\",\\\"periodo\\\":\\\"P1\\\",\\\"calificacion\\\":4.5}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+            "description": "Siempre usa el idEvento dup-001. La primera vez crea CALIFICACION_REPROBATORIA para T005; la segunda se ignora. Revisalo con \"Buzon de T005\"."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Buzon (directo al servicio, 8083)",
+      "item": [
+        {
+          "name": "Buzon de T002",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const alertas = pm.response.json();",
+                  "if (alertas.length > 0) { pm.collectionVariables.set('idAlerta', alertas[0].idAlerta); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base}}/api/notificar/buzon/T002",
+            "description": "Alertas de T002, la mas nueva primero. Guarda el idAlerta de la primera para marcarla como leida."
+          }
+        },
+        {
+          "name": "Buzon de T001 solo de A003",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base}}/api/notificar/buzon/T001?matricula=A003",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "api",
+                "notificar",
+                "buzon",
+                "T001"
+              ],
+              "query": [
+                {
+                  "key": "matricula",
+                  "value": "A003",
+                  "description": "Opcional: filtra por hijo"
+                }
+              ]
+            },
+            "description": "T001 tiene dos hijos (A001 y A003). Aqui solo salen las alertas de A003."
+          }
+        },
+        {
+          "name": "Buzon de T001 solo no leidas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base}}/api/notificar/buzon/T001?soloNoLeidas=true",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "api",
+                "notificar",
+                "buzon",
+                "T001"
+              ],
+              "query": [
+                {
+                  "key": "soloNoLeidas",
+                  "value": "true",
+                  "description": "Opcional"
+                }
+              ]
+            },
+            "description": "Solo las alertas con leida = false."
+          }
+        },
+        {
+          "name": "Total de no leidas de T002",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base}}/api/notificar/buzon/T002/no-leidas/total",
+            "description": "Numero para el contador de la app."
+          }
+        },
+        {
+          "name": "Marcar alerta como leida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 y leida', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().leida).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{base}}/api/notificar/buzon/{{idAlerta}}",
+            "description": "Usa el idAlerta que guardo \"Buzon de T002\". Despues el total de no leidas baja en 1.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leida\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Buzon de T005 (prueba de duplicados)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Una sola alerta', () => pm.expect(pm.response.json().length).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base}}/api/notificar/buzon/T005",
+            "description": "Despues de mandar dos veces \"Evento repetido\" debe haber una sola alerta."
+          }
+        },
+        {
+          "name": "Marcar alerta que no existe (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => { pm.response.to.have.status(404); pm.expect(pm.response.json().error).to.eql('ALERTA_NO_ENCONTRADA'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{base}}/api/notificar/buzon/AL-noexiste",
+            "description": "Responde 404 con error ALERTA_NO_ENCONTRADA.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leida\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Marcar sin el campo leida (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => { pm.response.to.have.status(400); pm.expect(pm.response.json().error).to.eql('CAMPOS_INVALIDOS'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{base}}/api/notificar/buzon/{{idAlerta}}",
+            "description": "Responde 400 con error CAMPOS_INVALIDOS.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Buzon a traves del API Gateway (8080)",
+      "description": "Las mismas peticiones pero entrando por el Gateway, como lo hara la app web. Si NotificarService esta apagado, el Gateway responde 503.",
+      "item": [
+        {
+          "name": "Buzon de T002 (Gateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const alertas = pm.response.json();",
+                  "if (alertas.length > 0) { pm.collectionVariables.set('idAlerta', alertas[0].idAlerta); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{gateway}}/api/notificar/buzon/T002",
+            "description": "Alertas de T002, la mas nueva primero. Guarda el idAlerta de la primera para marcarla como leida."
+          }
+        },
+        {
+          "name": "Buzon de T001 solo de A003 (Gateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{gateway}}/api/notificar/buzon/T001?matricula=A003",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "notificar",
+                "buzon",
+                "T001"
+              ],
+              "query": [
+                {
+                  "key": "matricula",
+                  "value": "A003",
+                  "description": "Opcional: filtra por hijo"
+                }
+              ]
+            },
+            "description": "T001 tiene dos hijos (A001 y A003). Aqui solo salen las alertas de A003."
+          }
+        },
+        {
+          "name": "Buzon de T001 solo no leidas (Gateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{gateway}}/api/notificar/buzon/T001?soloNoLeidas=true",
+              "host": [
+                "{{gateway}}"
+              ],
+              "path": [
+                "api",
+                "notificar",
+                "buzon",
+                "T001"
+              ],
+              "query": [
+                {
+                  "key": "soloNoLeidas",
+                  "value": "true",
+                  "description": "Opcional"
+                }
+              ]
+            },
+            "description": "Solo las alertas con leida = false."
+          }
+        },
+        {
+          "name": "Total de no leidas de T002 (Gateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{gateway}}/api/notificar/buzon/T002/no-leidas/total",
+            "description": "Numero para el contador de la app."
+          }
+        },
+        {
+          "name": "Marcar alerta como leida (Gateway)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 y leida', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().leida).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{gateway}}/api/notificar/buzon/{{idAlerta}}",
+            "description": "Usa el idAlerta que guardo \"Buzon de T002\". Despues el total de no leidas baja en 1.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leida\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Ver alertas publicadas (cola espia)",
+      "description": "Una cola de prueba enlazada a alerta.generada para ver lo que publica el servicio sin necesitar MensajeriaService.",
+      "auth": {
+        "type": "basic",
+        "basic": [
+          {
+            "key": "username",
+            "value": "escuela"
+          },
+          {
+            "key": "password",
+            "value": "escuela"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Crear cola espia (una sola vez)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 o 204', () => pm.expect(pm.response.code).to.be.oneOf([201, 204]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "url": "{{rabbit}}/api/queues/%2F/prueba.alertas",
+            "description": "Crea la cola prueba.alertas. Si ya existe no pasa nada.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"durable\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Enlazar cola espia a alerta.generada (una sola vez)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{rabbit}}/api/bindings/%2F/e/escuela.eventos/q/prueba.alertas",
+            "description": "Desde aqui, cada alerta.generada tambien llega a prueba.alertas.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"alerta.generada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Ver alerta.generada publicadas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{rabbit}}/api/queues/%2F/prueba.alertas/get",
+            "description": "Muestra hasta 10 mensajes sin borrarlos de la cola (ack_requeue_true). Debe haber uno por tutor por alerta.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 10,\n  \"ackmode\": \"ack_requeue_true\",\n  \"encoding\": \"auto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
