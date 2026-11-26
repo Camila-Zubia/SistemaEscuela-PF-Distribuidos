@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://sistemaescuela.com/registroescolar"
+           xmlns:tns="http://sistemaescuela.com/registroescolar"
+           elementFormDefault="qualified">
+
+    <xs:simpleType name="MatriculaType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z][0-9]{3,8}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="PromedioType">
+        <xs:restriction base="xs:decimal">
+            <xs:minInclusive value="0.00"/>
+            <xs:maxInclusive value="100.00"/>
+            <xs:fractionDigits value="2"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="CalificacionAlumnoType">
+        <xs:sequence>
+            <xs:element name="matricula" type="tns:MatriculaType" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="idCurso" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="promedio" type="tns:PromedioType" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="fechaRegistro" type="xs:dateTime" minOccurs="1" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ReporteEntregaCalificaciones">
+        <xs:sequence>
+            <xs:element name="idReporte" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="periodo" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="fechaEnvio" type="xs:dateTime" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="tuvoRetardo" type="xs:boolean" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="calificaciones" type="tns:CalificacionAlumnoType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AcuseRecibo">
+        <xs:sequence>
+            <xs:element name="idReporte" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="estatus" type="xs:string" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="fechaRecepcion" type="xs:dateTime" minOccurs="1" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="ReporteEntregaCalificaciones" type="tns:ReporteEntregaCalificaciones"/>
+    <xs:element name="AcuseRecibo" type="tns:AcuseRecibo"/>
+
+</xs:schema>
