@@ -22,6 +22,7 @@
         <module>MensajeriaService</module>
         <module>MoodleMock</module>
         <module>RegistroEscolarMock</module>
+        <module>Gateaway</module>
     </modules>
 
     <properties>
