@@ -1,0 +1,360 @@
+{
+  "info": {
+    "name": "IntegrationService + MoodleMock (Persona 1)",
+    "description": "Colección de pruebas para MoodleMock (8091) e IntegrationService (8084). Contratos: docs/contrato-api.md y docs/contrato-eventos.md.\n\n## Requisitos antes de probar\n1. `docker compose up -d` (RabbitMQ en 5672 / 15672)\n2. `RegistroEscolarEndpoint` corriendo en 8092 (SOAP)\n3. `MoodleMock` corriendo en 8091\n4. `IntegrationService` corriendo en 8084\n\n## Orden recomendado\n1. Carpeta 1 (`MoodleMock`): comprobar que responde con los datos semilla.\n2. Carpeta 2 (`IntegrationService`): ver estado inicial, sincronizar aval (1a y 2a vez para idempotencia), sincronizar calificaciones (RabbitMQ + SOAP/XSD) y consultar incidencias.\n3. Carpeta 3 (`RabbitMQ -> IntegrationService`): publicar `aval.resuelto` vía API de RabbitMQ y verificar que IntegrationService lo consumió.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "moodle",
+      "value": "http://localhost:8091"
+    },
+    {
+      "key": "integration",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "rabbit",
+      "value": "http://localhost:15672"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. MoodleMock (8091)",
+      "item": [
+        {
+          "name": "GET Cursos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Regresa cursos', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moodle}}/mock/moodle/cursos",
+              "host": ["{{moodle}}"],
+              "path": ["mock", "moodle", "cursos"]
+            }
+          }
+        },
+        {
+          "name": "GET Tareas por curso (CUR-101)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todas son de CUR-101', () => pm.response.json().forEach(t => pm.expect(t.idCurso).to.eql('CUR-101')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moodle}}/mock/moodle/tareas?idCurso=CUR-101",
+              "host": ["{{moodle}}"],
+              "path": ["mock", "moodle", "tareas"],
+              "query": [
+                {
+                  "key": "idCurso",
+                  "value": "CUR-101"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Entregas por tarea (T-10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Regresa entregas de T-10', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moodle}}/mock/moodle/entregas?idTarea=T-10",
+              "host": ["{{moodle}}"],
+              "path": ["mock", "moodle", "entregas"],
+              "query": [
+                {
+                  "key": "idTarea",
+                  "value": "T-10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Calificaciones (P1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Todas son de P1', () => pm.response.json().forEach(c => pm.expect(c.periodo).to.eql('P1')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moodle}}/mock/moodle/calificaciones?periodo=P1",
+              "host": ["{{moodle}}"],
+              "path": ["mock", "moodle", "calificaciones"],
+              "query": [
+                {
+                  "key": "periodo",
+                  "value": "P1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Entrega calificaciones profesores (P2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye retardo EMP-21', () => pm.expect(pm.response.json().some(e => e.numEmpleado === 'EMP-21' && e.aTiempo === false)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{moodle}}/mock/moodle/entrega-calificaciones?periodo=P2",
+              "host": ["{{moodle}}"],
+              "path": ["mock", "moodle", "entrega-calificaciones"],
+              "query": [
+                {
+                  "key": "periodo",
+                  "value": "P2"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. IntegrationService (8084)",
+      "item": [
+        {
+          "name": "GET Estado (RabbitMQ y contadores)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Servicio activo', () => pm.expect(pm.response.json().servicio).to.eql('integration-service'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{integration}}/api/integracion/estado",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "estado"]
+            }
+          }
+        },
+        {
+          "name": "POST Sincronizar aval (1a vez - publica nuevos)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Publico eventos de aval', () => pm.expect(pm.response.json().eventosPublicados).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{integration}}/api/integracion/aval/sincronizar",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "aval", "sincronizar"]
+            }
+          }
+        },
+        {
+          "name": "POST Sincronizar aval (2a vez - idempotencia: 0)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No duplica eventos (0 nuevos)', () => pm.expect(pm.response.json().eventosPublicados).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{integration}}/api/integracion/aval/sincronizar",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "aval", "sincronizar"]
+            }
+          }
+        },
+        {
+          "name": "POST Sincronizar calificaciones + SOAP/XSD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene campo eventosPublicados', () => pm.expect(pm.response.json()).to.have.property('eventosPublicados'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{integration}}/api/integracion/calificaciones/sincronizar",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "calificaciones", "sincronizar"]
+            }
+          }
+        },
+        {
+          "name": "GET Incidencias docentes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Detecta retardo de EMP-21', () => pm.expect(pm.response.json().incidencias.some(i => i.numEmpleado === 'EMP-21')).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{integration}}/api/integracion/incidencias",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "incidencias"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. RabbitMQ -> IntegrationService (aval.resuelto)",
+      "item": [
+        {
+          "name": "POST Publicar aval.resuelto en RabbitMQ",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('RabbitMQ enruto el mensaje', () => pm.expect(pm.response.json().routed).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "escuela"
+                },
+                {
+                  "key": "password",
+                  "value": "escuela"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"properties\": {\n    \"message_id\": \"{{$guid}}\",\n    \"content_type\": \"application/json\",\n    \"delivery_mode\": 2\n  },\n  \"routing_key\": \"aval.resuelto\",\n  \"payload\": \"{\\\"idEvento\\\":\\\"{{$guid}}\\\",\\\"tipo\\\":\\\"aval.resuelto\\\",\\\"fecha\\\":\\\"2026-11-26T19:30:00Z\\\",\\\"origen\\\":\\\"aval-service\\\",\\\"datos\\\":{\\\"idEntrega\\\":\\\"ENT-101\\\",\\\"matricula\\\":\\\"A001\\\",\\\"idTutor\\\":\\\"T001\\\",\\\"estado\\\":\\\"AVALADA\\\",\\\"fechaResolucion\\\":\\\"2026-11-26T19:30:00Z\\\"}}\",\n  \"payload_encoding\": \"string\"\n}"
+            },
+            "url": {
+              "raw": "{{rabbit}}/api/exchanges/%2F/escuela.eventos/publish",
+              "host": ["{{rabbit}}"],
+              "path": ["api", "exchanges", "%2F", "escuela.eventos", "publish"]
+            }
+          }
+        },
+        {
+          "name": "GET Verificar avales resueltos recibidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recibio ENT-101', () => pm.expect(pm.response.json().avalesResueltos.some(a => a.idEntrega === 'ENT-101')).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{integration}}/api/integracion/avales-resueltos",
+              "host": ["{{integration}}"],
+              "path": ["api", "integracion", "avales-resueltos"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
